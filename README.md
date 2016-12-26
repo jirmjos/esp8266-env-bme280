@@ -11,18 +11,20 @@ ESP8266 firmware for reading from a BME280 environmental sensor and displaying t
 File will not be displayed by default in platformio, since it is ignored by git.
 
 # OTA
-Firmware supports OTA. To flash the firmware for the first time, go to `platformio.ini` and comment out this line:
+Firmware supports OTA. The firmware sets up an mDNS hostname of `env280-CHIPID`, where `CHIPID` is the id of the esp8266 itself. 
+
+To flash the firmware for the first time, go to `platformio.ini` and comment out this line:
 
 ```
-upload_port = esp8266-da013c.local 
+upload_port = env280-da013c.local 
 ```
 
 You can then flash using serial port as normal. When this has completed, uncomment the line and update the host name to match the id of your board:
 
 ```
-upload_port = esp8266-YOURID.local 
+upload_port = env280-YOURID.local 
 ```
 
 This should now update firmware using OTA.
 
-You can find the id using e.g. bonjour browser on OS X. TODO: Print id on serial...
+You can find the id from the second screen displayed by the firmware. This also gives the IP address - if you can't use the `.local` hostname (for example if you don't have mDNS support on your PC) then you can use the IP instead.

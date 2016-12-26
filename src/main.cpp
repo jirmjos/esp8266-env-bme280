@@ -59,7 +59,7 @@
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
 
-boolean firmwareComplete = false;
+char hostName[32];
 
 Adafruit_BME280 bme(BME_CS); // hardware SPI
 boolean bme280Connected = false;
@@ -175,7 +175,7 @@ void drawGraphStatic(OLEDDisplay *display, int16_t x, int16_t y, float currentDa
 
 }
 
-void drawFrame1(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+void drawMain(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
   char line[32];
 
 //  drawGraph(display, x + 113, y + 11, temp, tempPerSecond,tempPerSecondFirst, tempPerSecondCount, DATA_PER_SECOND_SIZE, 8.0f, 8, 112);
@@ -204,37 +204,24 @@ void drawFrame1(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int1
   display->drawString(96 + x, 20 + y, "hPa");
 }
 
-void drawFrame2(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
-  drawLines(x, y, "Text line 1", "Text line 2");
-}
-
-void drawFrame3(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
+void drawIPAndId(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
   display->setFont(ArialMT_Plain_10);
-  display->drawString(2 + x, 4 + y, "Text line 1");
-  display->drawString(2 + x, 18 + y, "Text line 2");
-}
 
-void drawFrame4(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->setFont(ArialMT_Plain_10);
-  display->drawString(2 + x, 4 + y, "Text line 1");
-  display->drawString(2 + x, 18 + y, "Text line 2");
-}
+  display->setTextAlignment(TEXT_ALIGN_RIGHT);
+  display->drawString(16 + x, 5 + y, "ip:");
+  display->drawString(16 + x, 20 + y, "id:");
 
-void drawFrame5(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
   display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->setFont(ArialMT_Plain_10);
-  display->drawString(2 + x, 4 + y, "Text line 1");
-  display->drawString(2 + x, 18 + y, "Text line 2");
+  display->drawString(20 + x, 5 + y, WiFi.localIP().toString().c_str());
+  display->drawString(20 + x, 20 + y, hostName);
 }
 
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
-FrameCallback frames[] = { drawFrame1, drawFrame2};//, drawFrame3, drawFrame4, drawFrame5 };
+FrameCallback frames[] = { drawMain, drawIPAndId};
 
 // how many frames are there?
-int frameCount = 2;//5;
+int frameCount = 2;
 
 //void msOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
 //  display->setTextAlignment(TEXT_ALIGN_RIGHT);
@@ -250,6 +237,9 @@ OverlayCallback overlays[] = { };
 int overlaysCount = 0;
 
 void setup() {
+  
+  sprintf(hostName, "env280-%06x", ESP.getChipId());
+  
   Serial.begin(115200);
   Serial.println();
   Serial.println();
@@ -303,6 +293,18 @@ void setup() {
     ESP.restart();
   }
 
+  // Port defaults to 8266
+  // ArduinoOTA.setPort(8266);
+
+  // Hostname defaults to esp8266-[ChipID]
+  ArduinoOTA.setHostname(hostName);
+
+  // No authentication by default
+  // ArduinoOTA.setPassword("admin");
+
+  // Password can be set with it's md5 value as well
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
   ArduinoOTA.onStart([]() {
     // String type;
@@ -320,8 +322,7 @@ void setup() {
   
   ArduinoOTA.onEnd([]() {
     Serial.println("\nEnd");
-    displayMessage("Firmware updating", "Complete!");
-    firmwareComplete = true;
+    displayMessage("Firmware updated!", "Restarting...");
   });
   
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
@@ -370,28 +371,26 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
 
-  if (!firmwareComplete) {
-    int remainingTimeBudget = ui.update();
+  int remainingTimeBudget = ui.update();
 
-    if (remainingTimeBudget > 0) {
+  if (remainingTimeBudget > 0) {
 
-      if (bme280Connected) {
-        temp = bme.readTemperature();
-        pressure = bme.readPressure() / 100.0f;
-        humidity = bme.readHumidity();
+    if (bme280Connected) {
+      temp = bme.readTemperature();
+      pressure = bme.readPressure() / 100.0f;
+      humidity = bme.readHumidity();
 
-        while (millis() - lastSecondMillis > 1000) {
-          lastSecondMillis += 1000;
+      while (millis() - lastSecondMillis > 1000) {
+        lastSecondMillis += 1000;
 
-          recordData(temp, tempPerSecond, &tempPerSecondFirst, &tempPerSecondCount, DATA_PER_SECOND_SIZE);
-        }
+        recordData(temp, tempPerSecond, &tempPerSecondFirst, &tempPerSecondCount, DATA_PER_SECOND_SIZE);
       }
-      
-      // You can do some work here
-      // Don't do stuff if you are below your
-      // time budget.
-      delay(remainingTimeBudget);
     }
+    
+    // You can do some work here
+    // Don't do stuff if you are below your
+    // time budget.
+    delay(remainingTimeBudget);
   }
   
 }
