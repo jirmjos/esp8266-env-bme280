@@ -211,9 +211,8 @@ void drawIPAndId(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int
   display->drawString(16 + x, 5 + y, "ip:");
   display->drawString(16 + x, 20 + y, "id:");
 
-  display->setTextAlignment(TEXT_ALIGN_LEFT);
-  display->drawString(20 + x, 5 + y, WiFi.localIP().toString().c_str());
-  display->drawString(20 + x, 20 + y, hostName);
+  display->drawString(105 + x, 5 + y, WiFi.localIP().toString().c_str());
+  display->drawString(105 + x, 20 + y, hostName);
 }
 
 // This array keeps function pointers to all frames
@@ -283,7 +282,7 @@ void setup() {
   display.flipScreenVertically();
 
 
-  displayMessage("WiFi connecting...", "Please wait");
+  displayMessage("WiFi connecting", "Please wait...");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
@@ -302,7 +301,7 @@ void setup() {
   // No authentication by default
   // ArduinoOTA.setPassword("admin");
 
-  // Password can be set with it's md5 value as well
+  // Password can be set with its md5 value as well
   // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
   // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
@@ -361,8 +360,6 @@ void setup() {
   Serial.println("Ready");
   Serial.print("IP address: ");
   Serial.println(WiFi.localIP());
-
-
 
   lastSecondMillis = millis();
 }
