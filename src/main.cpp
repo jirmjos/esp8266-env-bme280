@@ -104,6 +104,18 @@ void drawLines(int16_t x, int16_t y, String line1, String line2) {
   display.drawString(2 + x, 20 + y, line2);
 }
 
+void drawProgress(int16_t x, int16_t y, int16_t percent) {
+  display.drawRect(x + 3, y + 24, 104, 6);
+  display.fillRect(x + 5, y + 26, percent, 2);
+}
+
+void displayProgress(String text, int16_t percent) {
+  display.clear();
+  drawLines(0, 0, text, "");
+  drawProgress(0, 0, percent);
+  display.display();
+}
+
 void displayMessage(String line1, String line2) {
   display.clear();
   drawLines(0, 0, line1, line2);
@@ -267,8 +279,7 @@ void drawFirmwareEnable(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t
     if (firmwareUpdateEnableTicks == 0) {
       display->drawString(2 + x, 20 + y, "Hold select to enable");
     } else {
-      display->drawRect(3, 23, 104, 6);
-      display->fillRect(5, 25, 100 * firmwareUpdateEnableTicks / firmwareUpdateEnableMinTicks, 2);
+      drawProgress(x, y, firmwareUpdateEnableTicks * 100 / firmwareUpdateEnableMinTicks);
     }
   }
 
@@ -385,43 +396,44 @@ void setup() {
     // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
     // Serial.println("Start updating " + type);
     Serial.println("Start updating");
-    displayMessage("Firmware updating", "Starting...");
+    displayMessage("Updating...", "");
 
   });
   
   ArduinoOTA.onEnd([]() {
     Serial.println("\nEnd");
-    displayMessage("Firmware updated!", "Restarting...");
+    displayMessage("Update complete", "Restarting...");
   });
   
   ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
     char line[32];
-    sprintf(line, "Progress: %u%%\r", (progress / (total / 100)));
-    displayMessage("Firmware updating", line);
-    Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    // sprintf(line, "Progress: %u%%\r", (progress / (total / 100)));
+    displayProgress("Updating...", (progress / (total / 100)));
+
+    // Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
   });
   
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) {
       Serial.println("Auth Failed");
-      displayMessage("Firmware updating", "Auth failed!");
+      displayMessage("Update error", "Auth failed!");
       
     } else if (error == OTA_BEGIN_ERROR) {
       Serial.println("Begin Failed");
-      displayMessage("Firmware updating", "Begin failed!");
+      displayMessage("Update error", "Begin failed!");
       
     } else if (error == OTA_CONNECT_ERROR) {
       Serial.println("Connect Failed");
-      displayMessage("Firmware updating", "Connect failed!");
+      displayMessage("Update error", "Connect failed!");
       
     } else if (error == OTA_RECEIVE_ERROR) {
       Serial.println("Receive Failed");
-      displayMessage("Firmware updating", "Receive failed!");
+      displayMessage("Update error", "Receive failed!");
       
     } else if (error == OTA_END_ERROR) {
       Serial.println("End Failed");
-      displayMessage("Firmware updating", "End failed!");
+      displayMessage("Update error", "End failed!");
     }
   });
   
