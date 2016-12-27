@@ -35,9 +35,6 @@
 // Include custom images
 #include "images.h"
 
-// Include WiFi SSID and password - use a .h so we can ignore it in git
-#include "wifiAuth.h"
-
 // For BME280
 #include <Wire.h>
 #include <SPI.h>
@@ -49,6 +46,11 @@
 #include <ESP8266mDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+
+// WifiManager for setting up connection
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager WiFi Configuration Magic
 
 // Switches
 #include <Bounce2.h>
@@ -64,10 +66,8 @@
 #define SWITCH2   5       // D1
 #define SWITCH1   4       // D2
 
-const char* ssid = WIFI_SSID;
-const char* password = WIFI_PASSWORD;
-
 char hostName[32];
+char chipId[8];
 
 Adafruit_BME280 bme(BME_CS); // hardware SPI
 boolean bme280Connected = false;
@@ -93,6 +93,10 @@ OLEDDisplayUi ui(&display);
 boolean firmwareUpdateEnabled = false;
 int16_t firmwareUpdateEnableTicks = 0;
 int16_t firmwareUpdateEnableMinTicks = 60;
+
+// Factory reset state
+int16_t factoryResetTicks = 0;
+int16_t factoryResetMinTicks = 300;
 
 Bounce switch1 = Bounce(); 
 Bounce switch2 = Bounce(); 
@@ -285,13 +289,40 @@ void drawFirmwareEnable(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t
 
 }
 
+void drawFactoryReset(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+  display->setFont(ArialMT_Plain_10);
+
+  if (!switch2.read()) {
+    factoryResetTicks++;
+    if (factoryResetTicks > factoryResetMinTicks) {
+      ESP.eraseConfig();
+      displayMessage("Settings reset", "Restarting...");
+      delay(1000);
+      ESP.reset();
+    }
+  } else {
+    factoryResetTicks -= 4;
+    if (factoryResetTicks <= 0) factoryResetTicks = 0;
+  }
+  
+  display->setTextAlignment(TEXT_ALIGN_LEFT);
+  display->drawString(2 + x, 5 + y, "Reset settings");
+  if (factoryResetTicks == 0) {
+    display->drawString(2 + x, 20 + y, "Hold select to reset");
+  } else {
+    drawProgress(x, y, factoryResetTicks * 100 / factoryResetMinTicks);
+  }
+
+}
+
+
 
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
-FrameCallback frames[] = { drawMain, drawIPAndId, drawFirmwareEnable};
+FrameCallback frames[] = { drawMain, drawIPAndId, drawFirmwareEnable, drawFactoryReset};
 
 // how many frames are there?
-int frameCount = 3;
+int frameCount = 4;
 
 //void msOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
 //  display->setTextAlignment(TEXT_ALIGN_RIGHT);
@@ -306,9 +337,26 @@ int frameCount = 3;
 OverlayCallback overlays[] = { };
 int overlaysCount = 0;
 
+//gets called when WiFiManager enters configuration mode
+void configModeCallback (WiFiManager *myWiFiManager) {
+  char line1[32];
+  char line2[32];
+  
+  Serial.println("Entered config mode");
+  Serial.println(WiFi.softAPIP());
+  //if you used auto generated SSID, print it
+  Serial.println(myWiFiManager->getConfigPortalSSID());
+  
+  sprintf(line1, "Use WiFi network %s", chipId);
+  sprintf(line2, "Go to http://%s", WiFi.softAPIP().toString().c_str());
+  displayMessage(line1, line2);  
+}
+
 void setup() {
   
   sprintf(hostName, "env280-%06x", ESP.getChipId());
+
+  sprintf(chipId, "%06x", ESP.getChipId());
   
   Serial.begin(115200);
   Serial.println();
@@ -362,16 +410,26 @@ void setup() {
 
   display.flipScreenVertically();
 
-
   displayMessage("WiFi connecting", "Please wait...");
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    displayMessage("No WiFi connection", "Rebooting...");
-    Serial.println("No WiFi connection, rebooting...");
-    delay(5000);
-    ESP.restart();
-  }
+  
+  WiFiManager wifiManager;
+  
+  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+  wifiManager.setAPCallback(configModeCallback);
+  
+  //timeout - this will quit WiFiManager if it's not configured in 3 minutes, causing a restart
+  wifiManager.setConfigPortalTimeout(180);
+
+  wifiManager.autoConnect(chipId);
+  
+  // WiFi.mode(WIFI_STA);
+  // WiFi.begin(ssid, password);
+  // while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+  //   displayMessage("No WiFi connection", "Rebooting...");
+  //   Serial.println("No WiFi connection, rebooting...");
+  //   delay(5000);
+  //   ESP.restart();
+  // }
 
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
