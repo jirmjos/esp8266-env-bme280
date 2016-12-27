@@ -50,11 +50,19 @@
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
 
+// Switches
+#include <Bounce2.h>
+
 // BME280 connections
 #define BME_SCK   14      // D5
 #define BME_MOSI  13      // D7
 #define BME_MISO  12      // D6
 #define BME_CS    15      // D8
+
+// Switch connections - momentary push-to-make connected between these pins
+// and GND
+#define SWITCH2   5       // D1
+#define SWITCH1   4       // D2
 
 const char* ssid = WIFI_SSID;
 const char* password = WIFI_PASSWORD;
@@ -80,6 +88,14 @@ unsigned long lastSecondMillis = 0;
 SSD1306Brzo display(GEOMETRY_128_32, 0x3c, D3, D4);
 
 OLEDDisplayUi ui(&display);
+
+// Firmware update state
+boolean firmwareUpdateEnabled = false;
+int16_t firmwareUpdateEnableTicks = 0;
+int16_t firmwareUpdateEnableMinTicks = 60;
+
+Bounce switch1 = Bounce(); 
+Bounce switch2 = Bounce(); 
 
 void drawLines(int16_t x, int16_t y, String line1, String line2) {
   display.setTextAlignment(TEXT_ALIGN_LEFT);
@@ -215,12 +231,56 @@ void drawIPAndId(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int
   display->drawString(105 + x, 20 + y, hostName);
 }
 
+void drawFirmwareEnable(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x, int16_t y) {
+  display->setFont(ArialMT_Plain_10);
+
+  if (firmwareUpdateEnabled) {
+    display->setTextAlignment(TEXT_ALIGN_LEFT);
+    display->drawString(2 + x, 5 + y, "Update ENABLED");
+    display->drawString(2 + x, 20 + y, "Press select to disable");
+
+    if (firmwareUpdateEnableTicks > 0) {
+      if (switch2.fell()) {
+        firmwareUpdateEnableTicks = 0;
+      }      
+    } else {
+      if (switch2.rose()) {
+        firmwareUpdateEnabled = false;
+      }      
+    }
+    
+  } else {
+    
+    if (!switch2.read()) {
+      firmwareUpdateEnableTicks++;
+      if (firmwareUpdateEnableTicks > firmwareUpdateEnableMinTicks) {
+        firmwareUpdateEnabled = true;
+        firmwareUpdateEnableTicks = firmwareUpdateEnableMinTicks;
+      }
+    } else {
+      firmwareUpdateEnableTicks -= 4;
+      if (firmwareUpdateEnableTicks <= 0) firmwareUpdateEnableTicks = 0;
+    }
+    
+    display->setTextAlignment(TEXT_ALIGN_LEFT);
+    display->drawString(2 + x, 5 + y, "Update DISABLED");
+    if (firmwareUpdateEnableTicks == 0) {
+      display->drawString(2 + x, 20 + y, "Hold select to enable");
+    } else {
+      display->drawRect(3, 23, 104, 6);
+      display->fillRect(5, 25, 100 * firmwareUpdateEnableTicks / firmwareUpdateEnableMinTicks, 2);
+    }
+  }
+
+}
+
+
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
-FrameCallback frames[] = { drawMain, drawIPAndId};
+FrameCallback frames[] = { drawMain, drawIPAndId, drawFirmwareEnable};
 
 // how many frames are there?
-int frameCount = 2;
+int frameCount = 3;
 
 //void msOverlay(OLEDDisplay *display, OLEDDisplayUiState* state) {
 //  display->setTextAlignment(TEXT_ALIGN_RIGHT);
@@ -242,6 +302,14 @@ void setup() {
   Serial.begin(115200);
   Serial.println();
   Serial.println();
+
+  //Set up switches
+  pinMode(SWITCH1, INPUT_PULLUP);
+  pinMode(SWITCH2, INPUT_PULLUP);
+  switch1.attach(SWITCH1);
+  switch2.attach(SWITCH2);
+  switch1.interval(5); // interval in ms
+  switch2.interval(5);
 
   bme280Connected = bme.begin();
   if (!bme280Connected) {
@@ -275,6 +343,8 @@ void setup() {
   ui.setOverlays(overlays, overlaysCount);
 
   ui.setTimePerTransition(400);
+
+  ui.disableAutoTransition();
 
   // Initialising the UI will init the display too.
   ui.init();
@@ -367,6 +437,12 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+
+  switch1.update();
+  switch2.update();
+  if (switch1.rose()) {
+    ui.nextFrame();
+  }
 
   int remainingTimeBudget = ui.update();
 
