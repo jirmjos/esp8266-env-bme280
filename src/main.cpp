@@ -295,10 +295,11 @@ void drawFactoryReset(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x
   if (!switch2.read()) {
     factoryResetTicks++;
     if (factoryResetTicks > factoryResetMinTicks) {
-      ESP.eraseConfig();
+      WiFi.disconnect();
       displayMessage("Settings reset", "Restarting...");
       delay(1000);
       ESP.reset();
+      delay(1000);
     }
   } else {
     factoryResetTicks -= 4;
