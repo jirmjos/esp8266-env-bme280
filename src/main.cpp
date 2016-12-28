@@ -316,8 +316,6 @@ void drawFactoryReset(OLEDDisplay *display, OLEDDisplayUiState* state, int16_t x
 
 }
 
-
-
 // This array keeps function pointers to all frames
 // frames are the single views that slide in
 FrameCallback frames[] = { drawMain, drawIPAndId, drawFirmwareEnable, drawFactoryReset};
@@ -423,15 +421,6 @@ void setup() {
 
   wifiManager.autoConnect(chipId);
   
-  // WiFi.mode(WIFI_STA);
-  // WiFi.begin(ssid, password);
-  // while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-  //   displayMessage("No WiFi connection", "Rebooting...");
-  //   Serial.println("No WiFi connection, rebooting...");
-  //   delay(5000);
-  //   ESP.restart();
-  // }
-
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
