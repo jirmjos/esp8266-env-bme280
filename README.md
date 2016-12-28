@@ -27,11 +27,11 @@ You can find the id from the second screen displayed by the firmware. This also 
 
 ## Todo
 
- [] HTTP firmware update
- [] Disable firmware update until enabled using button
- [] HTTP server showing same data as screen
- [] Long-term, low-frequency data logging
- [] Data logging to SPIFFS
- [] Upload of data to user-configured cloud storage, e.g. S3
- [] HomeKit integration via [Homebridge](https://github.com/nfarina/homebridge)
- [] Battery powered - deep sleep, wake to read sensor and upload every N reads?
+- [ ] HTTP firmware update
+- [ ] Disable firmware update until enabled using button
+- [ ] HTTP server showing same data as screen
+- [ ] Long-term, low-frequency data logging
+- [ ] Data logging to SPIFFS
+- [ ] Upload of data to user-configured cloud storage, e.g. S3
+- [ ] HomeKit integration via [Homebridge](https://github.com/nfarina/homebridge)
+- [ ] Battery powered - deep sleep, wake to read sensor and upload every N reads?
