@@ -35,3 +35,4 @@ You can find the id from the second screen displayed by the firmware. This also 
 - [ ] Upload of data to user-configured cloud storage, e.g. S3
 - [ ] HomeKit integration via [Homebridge](https://github.com/nfarina/homebridge)
 - [ ] Battery powered - deep sleep, wake to read sensor and upload every N reads?
+- [ ] BLE with nrf51 or nrf52?
