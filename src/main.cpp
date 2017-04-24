@@ -409,87 +409,89 @@ void setup() {
 
   display.flipScreenVertically();
 
-  displayMessage("WiFi connecting", "Please wait...");
-  
-  WiFiManager wifiManager;
-  
-  //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
-  wifiManager.setAPCallback(configModeCallback);
-  
-  //timeout - this will quit WiFiManager if it's not configured in 3 minutes, causing a restart
-  wifiManager.setConfigPortalTimeout(180);
+  //Skip wifi if switch 1 is held
+  if (digitalRead(SWITCH1)) {
+    displayMessage("WiFi connecting", "Please wait...");
+    
+    WiFiManager wifiManager;
+    
+    //set callback that gets called when connecting to previous WiFi fails, and enters Access Point mode
+    wifiManager.setAPCallback(configModeCallback);
+    
+    //timeout - this will quit WiFiManager if it's not configured in 3 minutes, causing a restart
+    wifiManager.setConfigPortalTimeout(180);
 
-  wifiManager.autoConnect(chipId);
+    wifiManager.autoConnect(chipId);
   
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
+    // Port defaults to 8266
+    // ArduinoOTA.setPort(8266);
 
-  // Hostname defaults to esp8266-[ChipID]
-  ArduinoOTA.setHostname(hostName);
+    // Hostname defaults to esp8266-[ChipID]
+    ArduinoOTA.setHostname(hostName);
 
-  // No authentication by default
-  // ArduinoOTA.setPassword("admin");
+    // No authentication by default
+    // ArduinoOTA.setPassword("admin");
 
-  // Password can be set with its md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
-  // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
+    // Password can be set with its md5 value as well
+    // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+    // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
-  ArduinoOTA.onStart([]() {
-    // String type;
-    // if (ArduinoOTA.getCommand() == U_FLASH)
-    //   type = "sketch";
-    // else // U_SPIFFS
-    //   type = "filesystem";
+    ArduinoOTA.onStart([]() {
+      // String type;
+      // if (ArduinoOTA.getCommand() == U_FLASH)
+      //   type = "sketch";
+      // else // U_SPIFFS
+      //   type = "filesystem";
 
-    // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
-    // Serial.println("Start updating " + type);
-    Serial.println("Start updating");
-    displayMessage("Updating...", "");
+      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
+      // Serial.println("Start updating " + type);
+      Serial.println("Start updating");
+      displayMessage("Updating...", "");
 
-  });
-  
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nEnd");
-    displayMessage("Update complete", "Restarting...");
-  });
-  
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    char line[32];
-    // sprintf(line, "Progress: %u%%\r", (progress / (total / 100)));
-    displayProgress("Updating...", (progress / (total / 100)));
+    });
+    
+    ArduinoOTA.onEnd([]() {
+      Serial.println("\nEnd");
+      displayMessage("Update complete", "Restarting...");
+    });
+    
+    ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+      char line[32];
+      // sprintf(line, "Progress: %u%%\r", (progress / (total / 100)));
+      displayProgress("Updating...", (progress / (total / 100)));
 
-    // Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
-  });
-  
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) {
-      Serial.println("Auth Failed");
-      displayMessage("Update error", "Auth failed!");
-      
-    } else if (error == OTA_BEGIN_ERROR) {
-      Serial.println("Begin Failed");
-      displayMessage("Update error", "Begin failed!");
-      
-    } else if (error == OTA_CONNECT_ERROR) {
-      Serial.println("Connect Failed");
-      displayMessage("Update error", "Connect failed!");
-      
-    } else if (error == OTA_RECEIVE_ERROR) {
-      Serial.println("Receive Failed");
-      displayMessage("Update error", "Receive failed!");
-      
-    } else if (error == OTA_END_ERROR) {
-      Serial.println("End Failed");
-      displayMessage("Update error", "End failed!");
-    }
-  });
-  
-  ArduinoOTA.begin();
-  
-  Serial.println("Ready");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());
+      // Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
+    });
+    
+    ArduinoOTA.onError([](ota_error_t error) {
+      Serial.printf("Error[%u]: ", error);
+      if (error == OTA_AUTH_ERROR) {
+        Serial.println("Auth Failed");
+        displayMessage("Update error", "Auth failed!");
+        
+      } else if (error == OTA_BEGIN_ERROR) {
+        Serial.println("Begin Failed");
+        displayMessage("Update error", "Begin failed!");
+        
+      } else if (error == OTA_CONNECT_ERROR) {
+        Serial.println("Connect Failed");
+        displayMessage("Update error", "Connect failed!");
+        
+      } else if (error == OTA_RECEIVE_ERROR) {
+        Serial.println("Receive Failed");
+        displayMessage("Update error", "Receive failed!");
+        
+      } else if (error == OTA_END_ERROR) {
+        Serial.println("End Failed");
+        displayMessage("Update error", "End failed!");
+      }
+    });
+    
+    ArduinoOTA.begin();
+    Serial.println("Ready");
+    Serial.print("IP address: ");
+    Serial.println(WiFi.localIP());
+  }  
 
   lastSecondMillis = millis();
 }
